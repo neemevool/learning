@@ -56,6 +56,8 @@ Publish/Subscribe • async/await • Channels • Dataflow • Rx • Outbox �
 32. Graceful Shutdown Is Part of the Design
 33. A Decision Path
 
+**Appendix A — The Intermediary Worksheet**
+
 ---
 
 # Part 1 — What Is Actually Being Coupled
@@ -225,19 +227,39 @@ Every solution in this space is "put an intermediary between the two parties." T
 
 ## 9. The Axes That Actually Distinguish Them
 
-Rather than memorizing the catalogue, evaluate any candidate against these seven axes:
+Libraries multiply and go out of fashion; these seven properties do not. Any intermediary you will ever be offered — Channels, Dataflow, Rx, an outbox, RabbitMQ, Kafka, whatever a vendor invented last quarter — is fully described, *for design purposes*, by where it sits on these axes. The point is to replace "which library should we use?" with "which guarantees do we need?"
 
-| Axis | The question | Why it bites |
-|---|---|---|
-| **Durability** | Does the item survive process death? | Decides whether this can carry "Required"/"Constitutive" events at all |
-| **Atomicity with state** | Can the event be committed in the same transaction as the state change? | The dual-write problem, Section 10 |
-| **Capacity & backpressure** | Bounded? What happens when full? | Section 6 — the failure mode under load |
-| **Delivery guarantee** | At-most-once, at-least-once? | Determines whether the consumer *must* be idempotent |
-| **Ordering** | Global, per-key, or none? | Per-key is almost always the real requirement; global is expensive |
-| **Fan-out semantics** | Competing consumers (one wins) or broadcast (all get it)? | Silently different; mixing them up loses messages |
-| **Observability & replay** | Can you see the backlog? Re-run a failed batch? | Determines whether production incidents are diagnosable |
+| Axis | The question | Possible values | Why it bites |
+|---|---|---|---|
+| **1. Durability** | Does the item survive process death? | none (heap) · durable on accept · durable + retained for replay | Gating axis. Decides whether this can carry "Required"/"Constitutive" events at all |
+| **2. Atomicity with state** | Can the event be committed in the same transaction as the state change? | yes (same store) · no (external system) · n/a (the event *is* the state) | The dual-write problem, Section 10 |
+| **3. Capacity & backpressure** | Bounded? What happens when full? | unbounded · bounded+block · bounded+drop · bounded+reject to caller | Section 6 — the failure mode under load |
+| **4. Delivery guarantee** | At-most-once or at-least-once? | those two only (Section 11) | Decides whether every downstream handler *must* be idempotent |
+| **5. Ordering** | Global, per-key, or none? | global · per-key · none | Per-key is almost always the real requirement; global costs you a single consumer, forever |
+| **6. Fan-out semantics** | Competing consumers (one wins) or broadcast (all get it)? | competing · broadcast · broadcast, latest-only | Opposite behaviours; mixing them up means duplicate work or silent starvation |
+| **7. Observability & replay** | Can you see the backlog? Re-run a failed batch? | nothing · depth metric · inspectable items · replay from an arbitrary position | Decides whether a production incident is diagnosable at all |
 
-A useful discipline: when someone proposes a mechanism, ask them to fill in this table. If any cell is "I don't know," that cell is where the incident will come from.
+They are axes rather than a checklist because each varies **independently**. Durability without ordering (an outbox drained by four pods). Ordering without durability (a single-reader channel). Backpressure without durability (a bounded channel). Broadcast without replay (Rx). If they moved together, one question would do.
+
+Two distinctions worth drawing explicitly, because they are the ones that get collapsed:
+
+- **Durability is not atomicity with state.** Kafka is extremely durable and has exactly zero atomicity with your PostgreSQL write. A durable-but-not-atomic intermediary still leaves the dual-write window open.
+- **Bounded-and-blocking is not a compromise.** It deliberately reintroduces coupling to the consumer's *rate* while leaving you free of its *latency*. That is usually the correct answer, not a fallback.
+
+Independent does not mean unordered. There is a dependency structure worth following in a review:
+
+```
+Durability (1) ─┬─→ enables Atomicity-with-state (2)
+                └─→ forces at-least-once (4) ──→ mandates consumer idempotency
+
+Capacity (3) ───→ parallel consumers ─────────→ destroys global Ordering (5)
+
+Fan-out (6) ────→ constrains Ordering (5)      [broadcast has no single sequence]
+```
+
+So: answer 1 first, since it gates 2 and 4. Settle 6 early, since it constrains 5. Treat 3 and 7 as things you must *state* rather than discover, because their failure modes only appear under load or after a scale-out.
+
+The discipline that makes this operational: **when someone proposes a mechanism, ask them to fill in the worksheet.** Appendix A gives the form and a worked example. If any cell comes back "I don't know," that cell is where the incident will come from.
 
 ## 10. The Dual-Write Problem and Why the Outbox Exists
 
@@ -823,6 +845,67 @@ Answer Section 5's question per event type, then follow through:
 6. **More than one replica draining anything shared?** → Section 30 before you scale, not after.
 
 And the reflex worth carrying out of this document: when someone proposes a mechanism, ask what the intermediary guarantees. If the answer is "nothing," the dependency did not go away — it just stopped being visible.
+
+---
+
+
+# Appendix A — The Intermediary Worksheet
+
+A one-page artifact for design reviews. It turns Section 9 from a list you nod at into a form that produces a decision.
+
+## The form
+
+Three columns, not two. The proposal's properties alone tell you nothing; the argument happens in the **gap** between what the event requires and what the mechanism provides.
+
+| Axis | **Required** (from the event) | **Provided** (by the proposal) | **Gap → decision** |
+|---|---|---|---|
+| 1. Durability | | | |
+| 2. Atomicity with state | | | |
+| 3. Capacity & backpressure | | | |
+| 4. Delivery guarantee | | | |
+| 5. Ordering | | | |
+| 6. Fan-out | | | |
+| 7. Observability & replay | | | |
+
+Two rules make it work:
+
+**Fill the "Required" column before anyone names a mechanism.** If the proposal is on the table first, the requirements column gets quietly written to match it. This is the same failure as Section 1's mechanism-before-meaning, one level up.
+
+**"I don't know" is a finding, not a blank.** Every unknown cell is a future incident. In practice the unknowns cluster in rows 3, 5, and 7, because those are the ones that only fail under load or after someone scales out.
+
+## Worked example
+
+Event: `OrderPaid`. Consumer: sends the invoice email. Proposal: *"publish it on a bounded `Channel<T>` and drain it with a `BackgroundService`."*
+
+| Axis | Required | Provided | Gap → decision |
+|---|---|---|---|
+| **1. Durability** | **Must survive pod restart.** A customer paid and expects an invoice | None; heap only | **Blocking.** Every rolling deploy silently drops invoices → outbox |
+| **2. Atomicity with state** | Must never email for an order whose payment commit rolled back | None; the write and the enqueue are separate steps | **Blocking.** → outbox row written in the same transaction |
+| **3. Capacity & backpressure** | Burst-tolerant; must never reject or stall the payment endpoint | Bounded 1000, `FullMode.Wait` | Blocking the payment path on a full buffer is the wrong trade → the outbox insert *is* the bound; never block the caller |
+| **4. Delivery guarantee** | At-least-once acceptable **if** deduplicated | At-most-once | Duplicate emails are customer-visible → dedup on `(order_id, 'invoice')` in the inbox table |
+| **5. Ordering** | None. Invoices are independent per order | Single reader ⇒ total order | Over-provided. Recording it as *not required* is what makes parallel readers safe later |
+| **6. Fan-out** | Competing — exactly one email per order | Competing | OK |
+| **7. Observability & replay** | Must be able to answer "which invoices failed to send yesterday?" | Nothing | **Blocking.** No in-memory mechanism can answer this → the outbox gives it for free via `SELECT` |
+
+The proposal dies on rows 1, 2, and 7 — and the table says so in ninety seconds, without anyone arguing about libraries. The revised design writes itself from the gap column: outbox row in the payment transaction, dispatcher drains it, inbox dedup on the consumer side.
+
+> ⚠ *Do not treat the "over-provided" row as free budget to spend. Single-reader total ordering is currently protecting you from an ordering bug nobody has had to think about. The value of writing "not required" in that cell is that it makes the future change safe and deliberate rather than accidental.*
+
+## The same worksheet, filled for a different event
+
+Event: `ProductViewed`. Consumer: increments a popularity counter. Same team, same service, same day.
+
+| Axis | Required | Provided by a bounded `Channel<T>` | Verdict |
+|---|---|---|---|
+| 1. Durability | None — losing a page view is invisible | None | OK |
+| 2. Atomicity with state | None | None | OK |
+| 3. Capacity & backpressure | Must never slow the page render | Bounded 10 000, `DropOldest` | OK, and drop is the *correct* policy here |
+| 4. Delivery guarantee | At-most-once fine | At-most-once | OK |
+| 5. Ordering | None | Whatever | OK |
+| 6. Fan-out | Competing | Competing | OK |
+| 7. Observability & replay | Backlog depth metric is enough | Channel count metric | OK |
+
+Seven greens, no infrastructure, done. This is the point of Section 5's buckets: the *same* mechanism that was disqualified on the previous page is exactly right here, and the worksheet is what tells the two cases apart without either over-engineering the counter or under-engineering the invoice.
 
 ---
 
