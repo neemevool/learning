@@ -1,0 +1,14 @@
+{
+  "targets": [
+    "PROJECTDIRECTORY1/PROJECT1.csproj",
+    "PROJECTDIRECTORY2/PROJECT2.csproj",
+    "PROJECTDIRECTORY3/PROJECT2.csproj",
+  ],
+  "buildArgs": ["-nologo", "-v", "q", "-clp:ErrorsOnly;NoSummary"],
+  "testArgs": ["--no-build", "--nologo", "--logger", "console;verbosity=minimal"],
+  "filterArgName": "--filter",
+  "gateTestArgs": ["--filter", "Category!=Integration"],
+  "testFailurePattern": "(Failed |error |Assert|Expected|Actual|Exception|Error Message| at .+:line \\d+|Total tests|Failed!)",
+  "maxOutputLines": 60,
+  "maxGateBlocks": 3
+}
