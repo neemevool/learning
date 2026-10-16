@@ -2,8 +2,9 @@
 <#
   Single entry point for build/test. Used by humans, Claude Code, hooks and CI.
     -Mode build               incremental build, errors only
-    -Mode warnings            full (non-incremental) build, lists all compiler/analyzer warnings
-                              plus errors; exits 0 when the build succeeds, even with warnings
+    -Mode warnings [-OutFile f] full (non-incremental) build, lists all compiler/analyzer warnings
+                              plus errors; -OutFile also writes every unique warning line to f;
+                              exits 0 when the build succeeds, even with warnings
     -Mode test [-Filter x]    build + tests (optional filter), failures only
     -Mode gate                build + gate test set (used by the SubagentStop hook)
   -Target a,b: projects/solutions (file or folder, relative to repo root) to build/test
@@ -15,6 +16,7 @@ param(
   [ValidateSet('build','warnings','test','gate')] [string]$Mode = 'build',
   [string]$Filter,
   [string[]]$Target,
+  [string]$OutFile,
   [switch]$FromHook
 )
 
@@ -24,6 +26,10 @@ if ($FromHook) {
   $raw = [Console]::In.ReadToEnd()
   if ($raw) { $hookInput = $raw | ConvertFrom-Json }
 }
+
+# Emscripten's bundled Node (SPA wasm relink) rejects newer flags such as --use-system-ca,
+# which Claude Code's settings env injects. Scoped to this process only.
+Remove-Item Env:NODE_OPTIONS -ErrorAction SilentlyContinue
 
 $root = if ($hookInput -and $hookInput.cwd) { $hookInput.cwd } else { Split-Path $PSScriptRoot -Parent }
 Set-Location $root
@@ -105,6 +111,10 @@ function Invoke-WarningsBuild {
     $warnings += @($out | Where-Object { $_ -match ': warning ' })
   }
   $warnings = @($warnings | Select-Object -Unique)
+  if ($OutFile) {
+    New-Item -ItemType Directory -Force -Path (Split-Path $OutFile -Parent) | Out-Null
+    $warnings | Set-Content -Path $OutFile -Encoding utf8
+  }
   if (-not $warnings) { Write-Output "OK (warnings): build succeeded, 0 warnings"; exit 0 }
 
   $byCode = $warnings | ForEach-Object { if ($_ -match ': warning (\S+?):') { $Matches[1] } else { '?' } } |
