@@ -8,11 +8,14 @@
 
 ## 0. The root principle
 
-**Whoever holds the lifetime bill optimises correctly.**
+**Whoever holds the bill optimises — for itself.** Whether the buyer benefits depends on two further conditions:
 
-Everything below follows from it. A vendor paid for a build optimises the build. A vendor paid for a lifecycle optimises the lifecycle. A state that owns neither the bill nor the exit option optimises nothing — it inspects, writes rules about how others should build, and pays later for what the rules could not observe.
+1. **Competition at the moment each bill is paid.** Optimisation passes through to the buyer's price only where the buyer has an alternative at that moment. The build is competitive once; every change after it is bought from the incumbent under monopoly. "The market sorts it out on average over time" holds for commodities; a one-off statutory system never reaches the average.
+2. **The bill must reach a party that can change the form of purchase.** A running cost that is visible but routed to a desk with no authority over how the system was bought is noise. If the party who chose the form never sees the tail, and the party who pays the tail never chose the form, no amount of transparency corrects the decision.
 
-The design question is therefore not "in-house or outsourced," nor "build or SaaS." It is: **which party is positioned so that its cheapest path is the state's cheapest lifetime path, and does the state retain the right to change who that party is.**
+A vendor paid for a build optimises the build. A vendor paid for a lifecycle optimises the lifecycle. A state that holds neither a credible alternative at each change moment nor the authority to change the form of purchase optimises nothing — it inspects, writes rules about how others should build, and pays later, elsewhere, for what the rules could not observe.
+
+The design question is therefore not "in-house or outsourced," nor "build or SaaS." It is: **at every moment the state pays, does it have an alternative, and does the bill reach someone who can act on it.**
 
 ---
 
@@ -49,7 +52,7 @@ The vendor then needs no rule. It optimises, and lands in the right place becaus
 
 Two conditions for it to work:
 
-1. **Visibility only bites if someone holds the lifetime bill.** If the sponsor's budget line ends at go-live and maintenance is another pot, deferred cost is visible to nobody who decides. The house owning the core is what creates a party with a lifetime interest. Without it, the mechanism is just better accounting.
+1. **Visibility only bites if it reaches someone who can change the form of purchase.** Today the ministry chooses the form and funds the build; the IT house inherits the system and pays maintenance from a pooled budget. The running cost is fully visible — and visible to the wrong party. Either the house carrying the tail gets authority over the form of purchase (ownership of the core), or the tail is attributed back to the sponsor so the initial decision carries its own maintenance bill. One of the two; otherwise the form is chosen by a party that will never pay for it.
 2. **The buyer-side obligations are the irreducible residue of formal rule** — enforceable because the state enforces them on itself, and their violation is visible.
 
 Anything in a tender that is neither (a) nor (b) is a wish.
@@ -106,8 +109,9 @@ S5/S6 are the direction. S2 and S3 are choosable now. S4 is where procurement dr
 3. **Analysis deliverables restructured** — (a) states, events, invariants; (b) roles and mandates; (c) UI as a derived artefact. Analysis that cannot pass the second-client test on paper is not accepted.
 4. **UI defined as replaceable** — takeover and warranty clauses treat the UI as independently re-tenderable; the backend accepts no scope that exists only to serve a particular UI.
 5. **Two lots where the service is large enough**, API annex shared, house named as integrator.
+6. **Change work is not sole-sourced by default.** Hourly maintenance from the incumbent is sole-sourcing without the name. The change moment needs its own alternative: a second framework vendor able to take change work (requires the core in §5), a priced change catalogue, or — cheapest and most effective — enough in-house capability that a small change is done in-house. The in-house alternative is the only price discipline that is present at every change, without a procedure.
 
-Items 1–2 move from aspirational governance to observable acceptance. Item 5 is where incentives change.
+Items 1–2 move from aspirational governance to observable acceptance. Item 5 is where build incentives change. Item 6 is where change prices change.
 
 ---
 
@@ -130,6 +134,14 @@ Government systems live 10–15 years; build is a minority of lifetime cost. Opt
 
 **Reframe:** the state is not buying a cheaper system; it is buying the right to re-tender, add channels and change rules without the original vendor. "You pay more now" is true of every contract that preserves those rights.
 
+### 8a. Follow-up objection: "A vendor who built the whole monolith also optimises the change better."
+
+True — and irrelevant to what the state pays. The vendor's implementation cost of a change is not the state's cost; the *price* is, and the price is set at the change moment by the presence or absence of an alternative. The monolith is exactly what removes the alternative.
+
+A real case: roughly 600 hours were billed to add an auto-complete field to one form, wired to a public address-lookup API. Comparable work on another system took a developer about four hours. The vendor very likely did it in four hours as well; the bill was 600 because nothing in the situation made it anything else. The build contract had been competitive and won on price. Maintenance was then bought from the same vendor by the hour. The 600-hour invoice was visible to everyone — and routed to an IT house with a pooled budget and no authority over how the system had been bought. The ministry that chose the form never saw it.
+
+Separation is not valuable because it makes change cheaper to implement. It is valuable because it keeps a second implementer possible at every change moment, which is the only thing that disciplines the hourly price. The exit option is not about re-tendering; it is about the vendor knowing you could.
+
 ---
 
 ## 9. The radical position: "Define the process, then buy it as SaaS"
@@ -138,7 +150,7 @@ Government systems live 10–15 years; build is a minority of lifetime cost. Opt
 
 What remains are three things SaaS does to the *other* terms of the state's cost function:
 
-**1. It optimises the vendor's lifetime cost, not the state's.** The state's cost includes the price. In a competitive market these move together. For a statutory Estonian process there is one buyer and, after go-live, effectively one seller — a bilateral monopoly, which is a negotiation, not a market. The vendor's efficiency is real; who captures it is decided by switching cost. Lifecycle alignment plus lock-in means the savings accrue to the vendor. Cost visibility without an exit is a visible number the state cannot act on.
+**1. It optimises the vendor's lifetime cost, not the state's.** This is §0 condition 1 in its purest form. The state's cost is the price. In a competitive market price and efficiency move together. For a statutory Estonian process there is one buyer and, after go-live, effectively one seller — a bilateral monopoly, which is a negotiation, not a market. The vendor's efficiency is real; who captures it is decided by switching cost. Lifecycle alignment plus lock-in means the savings accrue to the vendor. SaaS does what the 600-hour case does, only with the alternative removed by design rather than by neglect.
 
 **2. "Define first, then buy" reproduces the analysis-tender failure with a worse counterparty.** The process is a legal artefact; it changes with the law. Either regulatory-change risk is priced into the subscription (paying for ambiguity in advance) or changes are billed per request (change-request margins from a vendor that cannot be left). The upfront definition is validated by nothing until the product exists — as today — and the vendor now has every incentive to treat it as complete and bill divergence.
 
@@ -181,3 +193,4 @@ Build / don't-build is decided before any of the above: does a market already ex
 3. Pilot S3 (two lots, API annex) on one large service.
 4. Scope the mandate/consent infrastructure as a platform product.
 5. Position the SaaS discussion as S6: welcome where the state keeps the core; declined where it does not.
+6. Close the decision/cost gap: either the IT house that carries maintenance gets authority over the form of purchase, or maintenance cost is attributed back to the sponsoring ministry. And end default hourly sole-sourcing of change work (§7 item 6).
