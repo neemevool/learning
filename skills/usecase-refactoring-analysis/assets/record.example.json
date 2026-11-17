@@ -1,0 +1,176 @@
+{
+  "_comment": "ILLUSTRATIVE ONLY. Paths, names, numbers and findings are invented to show the shape of a record. Do not copy any of its content into a real record.",
+  "schema_version": "1",
+  "use_case": {
+    "id": "eelanalyys-fill-text-vastutaja",
+    "title": "Vastutaja fills Probleem and Eesmärk in Eelanalüüs",
+    "teema_liik": "EV",
+    "etapp": "Eelanalüüs",
+    "role": "Vastutaja",
+    "view": "EELANALÜÜS",
+    "operation": "fill-text",
+    "entry": "/teema/{teema}/versioon/{versioon}?tab=TekstidJaKommentaarid&t1=EELANALÜÜS",
+    "steps": [
+      "Open the teema",
+      "Open Tekstid ja kommentaarid",
+      "Type into Probleem",
+      "Type into Eesmärk",
+      "Wait for Andmed salvestatud"
+    ],
+    "backend_calls": [
+      { "method": "GET", "path": "/api/teema/{teema}/versioon/{versioon}/dokument/{liik}" }
+    ],
+    "hub_methods": ["Init", "SendDirectUpdate"]
+  },
+  "liveness": {
+    "status": "traced",
+    "evidence": [
+      { "type": "v8-coverage", "ref": "analysis/usecases/eelanalyys-fill-text-vastutaja/trace.json" },
+      { "type": "agent-walk", "ref": "Steps above performed once through the browser against the Vite dev server" }
+    ],
+    "notes": "Comment and history panels were not opened; their code shows as unexecuted."
+  },
+  "run": {
+    "date": "2026-11-12",
+    "commit": "0000000",
+    "agent": "example",
+    "skill_version": "1",
+    "data_sources": ["analysis/data/inventory.json", "analysis/data/usage.json"]
+  },
+  "components": [
+    {
+      "id": "frontend/src/example/EelanalyysView.tsx#EelanalyysView",
+      "path": "frontend/src/example/EelanalyysView.tsx",
+      "name": "EelanalyysView",
+      "kind": "component",
+      "role": "view-composite",
+      "created_year": 2025,
+      "loc": 180,
+      "executed": "yes",
+      "executed_fraction": 0.8,
+      "consumers_total": 1,
+      "consumers_in_use_case": 1,
+      "cluster_id": null,
+      "generation": null,
+      "props_declared": 3,
+      "props_passed_here": 3,
+      "state_touched": [
+        { "kind": "store", "name": "dokument", "access": "read" },
+        { "kind": "url", "name": "t1", "access": "read" }
+      ]
+    },
+    {
+      "id": "frontend/src/example/TextBlock.tsx#TextBlock",
+      "path": "frontend/src/example/TextBlock.tsx",
+      "name": "TextBlock",
+      "kind": "component",
+      "role": "domain-widget",
+      "created_year": 2025,
+      "loc": 240,
+      "executed": "yes",
+      "executed_fraction": 0.35,
+      "consumers_total": 9,
+      "consumers_in_use_case": 1,
+      "cluster_id": null,
+      "generation": "text-editor",
+      "props_declared": 11,
+      "props_passed_here": 4,
+      "state_touched": [
+        { "kind": "hub", "name": "/hub/dokument", "access": "subscribe" },
+        { "kind": "store", "name": "dokument", "access": "write" }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "frontend/src/example/EelanalyysView.tsx#EelanalyysView",
+      "to": "frontend/src/example/TextBlock.tsx#TextBlock",
+      "type": "render",
+      "evidence": "frontend/src/example/EelanalyysView.tsx:96"
+    },
+    {
+      "from": "frontend/src/example/TextBlock.tsx#TextBlock",
+      "to": "frontend/src/example/EelanalyysView.tsx#EelanalyysView",
+      "type": "store-write",
+      "evidence": "frontend/src/example/TextBlock.tsx:141"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "signal": "L0",
+      "components": ["frontend/src/example/EelanalyysView.tsx#EelanalyysView"],
+      "observation": "Cognitive-load measures for this use-case.",
+      "evidence": ["analysis/usecases/eelanalyys-fill-text-vastutaja/coverage.json"],
+      "basis": "tool",
+      "confidence": "high",
+      "measure": {
+        "files_in_set": 2,
+        "directories_spanned": 1,
+        "max_render_depth": 2,
+        "indirection_hops_to_data": 3,
+        "eras_mixed": ["2025-26"],
+        "conventions_mixed": [],
+        "search_attempts": 2
+      }
+    },
+    {
+      "id": "F2",
+      "signal": "B2",
+      "components": [
+        "frontend/src/example/EelanalyysView.tsx#EelanalyysView",
+        "frontend/src/example/TextBlock.tsx#TextBlock"
+      ],
+      "observation": "EelanalyysView renders TextBlock, and TextBlock writes the dokument store slice that EelanalyysView reads to decide which blocks to render.",
+      "evidence": [
+        "frontend/src/example/EelanalyysView.tsx:60-96",
+        "frontend/src/example/TextBlock.tsx:141"
+      ],
+      "basis": "reading",
+      "confidence": "medium",
+      "measure": null
+    },
+    {
+      "id": "F3",
+      "signal": "C4",
+      "components": ["frontend/src/example/TextBlock.tsx#TextBlock"],
+      "observation": "This use-case executes 35% of TextBlock's functions and passes 4 of its 11 props; TextBlock has 9 consumers in the application.",
+      "evidence": ["analysis/usecases/eelanalyys-fill-text-vastutaja/coverage.json"],
+      "basis": "tool",
+      "confidence": "high",
+      "measure": { "executed_fraction": 0.35, "consumers_total": 9, "props_passed_here": 4, "props_declared": 11 }
+    }
+  ],
+  "moves": [
+    {
+      "id": "M1",
+      "type": "break-cycle",
+      "targets": ["frontend/src/example/TextBlock.tsx#TextBlock"],
+      "addresses": ["F2"],
+      "precondition": "Characterization test covering fill-text and reload for this view",
+      "risk": "medium",
+      "note": null
+    }
+  ],
+  "coupling": {
+    "since": "24 months ago",
+    "commits_considered": 412,
+    "internal_pairs": [
+      {
+        "a": "frontend/src/example/EelanalyysView.tsx",
+        "b": "frontend/src/example/TextBlock.tsx",
+        "together": 6,
+        "jaccard": 0.4
+      }
+    ],
+    "external": []
+  },
+  "open_questions": [
+    {
+      "id": "Q1",
+      "question": "Are the 7 TextBlock props that this view never passes used by a live view, or are they left over from the Quill displays?",
+      "for": "senior-developer",
+      "blocks": ["F3"]
+    }
+  ]
+}
